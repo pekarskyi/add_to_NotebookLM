@@ -674,8 +674,14 @@ async function handleLanguageChange() {
     updateImportButtons();
     await loadNotebooks();
 
-    const successText = I18n.get('settings_accountChanged').replace('Account changed', 'Language changed');
-    showStatus('success', '✓ ' + (lang === 'ru' ? 'Язык изменён' : 'Language changed'));
+    // Show success message in selected language
+    let message = 'Language changed';
+    if (lang === 'ru') {
+      message = 'Язык изменён';
+    } else if (lang === 'uk') {
+      message = 'Мову змінено';
+    }
+    showStatus('success', '✓ ' + message);
   }
 }
 

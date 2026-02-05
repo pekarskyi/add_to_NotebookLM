@@ -7,12 +7,175 @@ importScripts('lib/youtube-comments-api.js', 'lib/comments-to-md.js');
 // Utilities
 // ============================================
 
+// Rate Limiter - prevents excessive API calls
+const RateLimiter = {
+  lastCall: 0,
+  minInterval: 500, // Minimum 500ms between API calls
+  queue: [],
+
+  async throttle(fn) {
+    const now = Date.now();
+    const timeSinceLastCall = now - this.lastCall;
+
+    if (timeSinceLastCall < this.minInterval) {
+      // Wait for remaining time
+      await new Promise(resolve => setTimeout(resolve, this.minInterval - timeSinceLastCall));
+    }
+
+    this.lastCall = Date.now();
+    return await fn();
+  }
+};
+
+// Response Validator - validates API responses
+const ResponseValidator = {
+  /**
+   * Validate that response is from expected origin
+   */
+  validateOrigin(url, expectedOrigin) {
+    if (!url || typeof url !== 'string') {
+      throw new Error('Invalid URL');
+    }
+
+    try {
+      const urlObj = new URL(url);
+      if (!urlObj.origin.includes(expectedOrigin)) {
+        throw new Error(`Invalid response origin: expected ${expectedOrigin}, got ${urlObj.origin}`);
+      }
+    } catch (error) {
+      throw new Error(`Invalid URL format: ${error.message}`);
+    }
+  },
+
+  /**
+   * Validate RPC response structure
+   */
+  validateRpcResponse(responseText) {
+    if (!responseText || typeof responseText !== 'string') {
+      throw new Error('Invalid RPC response: expected string, got ' + typeof responseText);
+    }
+
+    // Check for common error patterns
+    if (responseText.includes('"error"') || responseText.includes('Error')) {
+      console.warn('Possible error in RPC response');
+    }
+
+    return true;
+  },
+
+  /**
+   * Validate notebook ID format (UUID)
+   */
+  validateNotebookId(id) {
+    const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+    if (!id || !uuidRegex.test(id)) {
+      throw new Error(`Invalid notebook ID format: ${id}`);
+    }
+    return true;
+  },
+
+  /**
+   * Validate URL format
+   */
+  validateUrl(url) {
+    if (!url || typeof url !== 'string') {
+      throw new Error('Invalid URL: must be a string');
+    }
+
+    try {
+      new URL(url);
+    } catch (error) {
+      throw new Error(`Invalid URL format: ${url}`);
+    }
+
+    return true;
+  }
+};
+
+// Enhanced Error Handler
+const ErrorHandler = {
+  /**
+   * Map error to user-friendly message with multi-language support
+   */
+  getUserFriendlyMessage(error) {
+    // Detect language (can be extended to read from chrome.storage)
+    const lang = navigator.language || 'en';
+
+    const errorMap = {
+      'Failed to fetch': {
+        en: 'Network error. Please check your internet connection.',
+        ru: 'Ошибка сети. Проверьте подключение к интернету.',
+        uk: 'Помилка мережі. Перевірте підключення до Інтернету.'
+      },
+      'Not authorized': {
+        en: 'Please login to NotebookLM first.',
+        ru: 'Пожалуйста, войдите в NotebookLM.',
+        uk: 'Спочатку увійдіть до NotebookLM.'
+      },
+      'Invalid notebook ID': {
+        en: 'Invalid notebook selected. Please try again.',
+        ru: 'Выбран недействительный блокнот. Попробуйте снова.',
+        uk: 'Обрано недійсний нотатник. Спробуйте ще раз.'
+      },
+      'Invalid URL': {
+        en: 'Invalid URL provided. Please check the address.',
+        ru: 'Указан недействительный URL. Проверьте адрес.',
+        uk: 'Вказано недійсний URL. Перевірте адресу.'
+      },
+      'AbortError': {
+        en: 'Request timeout. Please try again.',
+        ru: 'Превышено время ожидания. Попробуйте снова.',
+        uk: 'Перевищено час очікування. Спробуйте ще раз.'
+      },
+      'Invalid response origin': {
+        en: 'Security error: unexpected response source.',
+        ru: 'Ошибка безопасности: неожиданный источник ответа.',
+        uk: 'Помилка безпеки: неочікуване джерело відповіді.'
+      },
+    };
+
+    const defaultMessages = {
+      en: 'An unexpected error occurred. Please try again.',
+      ru: 'Произошла неожиданная ошибка. Попробуйте снова.',
+      uk: 'Сталася неочікувана помилка. Спробуйте ще раз.'
+    };
+
+    const errorMessage = error.message || error.toString();
+
+    // Find matching error
+    for (const [key, messages] of Object.entries(errorMap)) {
+      if (errorMessage.includes(key)) {
+        if (lang.startsWith('uk')) return messages.uk;
+        if (lang.startsWith('ru')) return messages.ru;
+        return messages.en;
+      }
+    }
+
+    // Return default message
+    if (lang.startsWith('uk')) return defaultMessages.uk;
+    if (lang.startsWith('ru')) return defaultMessages.ru;
+    return defaultMessages.en;
+  },
+
+  /**
+   * Log error with context
+   */
+  logError(context, error, additionalInfo = {}) {
+    console.error(`[${context}]`, error.message || error, additionalInfo);
+  }
+};
+
 async function fetchWithTimeout(url, options = {}, timeout = 30000) {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
   try {
     const response = await fetch(url, { ...options, signal: controller.signal });
     return response;
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      throw new Error('Request timeout');
+    }
+    throw error;
   } finally {
     clearTimeout(id);
   }
@@ -25,18 +188,36 @@ async function fetchWithTimeout(url, options = {}, timeout = 30000) {
 const NotebookLMAPI = {
   BASE_URL: 'https://notebooklm.google.com',
   tokens: null,
+  TOKEN_LIFETIME_MS: 30 * 60 * 1000, // 30 minutes
 
   // Get authentication tokens from NotebookLM page
-  async getTokens(authuser = 0) {
+  async getTokens(authuser = 0, forceRefresh = false) {
     try {
+      // Check if tokens are still valid (not expired)
+      if (!forceRefresh && this.tokens && this.tokens.timestamp) {
+        const tokenAge = Date.now() - this.tokens.timestamp;
+        if (tokenAge < this.TOKEN_LIFETIME_MS) {
+          return this.tokens; // Tokens are still fresh
+        }
+        console.log('Tokens expired, refreshing...');
+      }
+
       const url = authuser > 0
         ? `${this.BASE_URL}/?authuser=${authuser}&pageId=none`
         : this.BASE_URL;
 
-      const response = await fetchWithTimeout(url, {
-        credentials: 'include',
-        redirect: 'manual'
+      // Use rate limiter to prevent excessive token refresh requests
+      const response = await RateLimiter.throttle(async () => {
+        return await fetchWithTimeout(url, {
+          credentials: 'include',
+          redirect: 'manual'
+        });
       });
+
+      // Validate response origin for security
+      if (response.url) {
+        ResponseValidator.validateOrigin(response.url, 'notebooklm.google.com');
+      }
 
       if (!response.ok && response.type !== 'opaqueredirect') {
         throw new Error('Failed to fetch NotebookLM page');
@@ -44,19 +225,40 @@ const NotebookLMAPI = {
 
       const html = await response.text();
 
+      // Validate HTML response
+      if (!html || typeof html !== 'string' || html.length < 100) {
+        throw new Error('Invalid HTML response from NotebookLM');
+      }
+
       // Extract tokens from HTML
       const bl = this.extractToken('cfb2h', html);
       const at = this.extractToken('SNlM0e', html);
 
       if (!bl || !at) {
+        ErrorHandler.logError('getTokens', new Error('Tokens not found in HTML'), {
+          htmlLength: html.length,
+          authuser
+        });
         throw new Error('Not authorized. Please login to NotebookLM first.');
       }
 
-      this.tokens = { bl, at, authuser };
+      // Store tokens with timestamp
+      this.tokens = {
+        bl,
+        at,
+        authuser,
+        timestamp: Date.now()
+      };
+
+      console.log('Tokens refreshed successfully');
       return this.tokens;
     } catch (error) {
-      console.error('getTokens error:', error);
-      throw new Error('Please login to NotebookLM first');
+      ErrorHandler.logError('getTokens', error);
+
+      // Clear invalid tokens
+      this.tokens = null;
+
+      throw new Error(ErrorHandler.getUserFriendlyMessage(error));
     }
   },
 
@@ -126,6 +328,12 @@ const NotebookLMAPI = {
 
   // Add multiple sources to notebook
   async addSources(notebookId, urls) {
+    // Validate notebook ID
+    ResponseValidator.validateNotebookId(notebookId);
+
+    // Validate all URLs
+    urls.forEach(url => ResponseValidator.validateUrl(url));
+
     const sources = urls.map(url => {
       // YouTube URLs need special format
       if (url.includes('youtube.com') || url.includes('youtu.be')) {
@@ -165,8 +373,15 @@ const NotebookLMAPI = {
 
   // Execute RPC call to NotebookLM
   async rpc(rpcId, params, sourcePath = '/') {
-    if (!this.tokens) {
+    // Check if tokens exist and are not expired
+    if (!this.tokens || !this.tokens.timestamp) {
       await this.getTokens();
+    } else {
+      const tokenAge = Date.now() - this.tokens.timestamp;
+      if (tokenAge > this.TOKEN_LIFETIME_MS) {
+        console.log('Tokens expired, refreshing before RPC call...');
+        await this.getTokens(this.tokens.authuser, true);
+      }
     }
 
     const url = new URL(`${this.BASE_URL}/_/LabsTailwindUi/data/batchexecute`);
@@ -187,20 +402,28 @@ const NotebookLMAPI = {
       'at': this.tokens.at
     });
 
-    const response = await fetchWithTimeout(url.toString(), {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      credentials: 'include',
-      body: body.toString()
+    // Use rate limiter for API calls
+    const response = await RateLimiter.throttle(async () => {
+      return await fetchWithTimeout(url.toString(), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        credentials: 'include',
+        body: body.toString()
+      });
     });
 
     if (!response.ok) {
       throw new Error(`RPC call failed: ${response.status}`);
     }
 
-    return await response.text();
+    const responseText = await response.text();
+
+    // Validate response
+    ResponseValidator.validateRpcResponse(responseText);
+
+    return responseText;
   },
 
   // Get list of Google accounts (filter out YouTube channels/profiles)
@@ -306,6 +529,10 @@ const NotebookLMAPI = {
 
   // Delete a single source from notebook
   async deleteSource(notebookId, sourceId) {
+    // Validate IDs
+    ResponseValidator.validateNotebookId(notebookId);
+    ResponseValidator.validateNotebookId(sourceId); // Source ID is also UUID
+
     // Note: notebook_id is passed via source_path, NOT in params!
     // Payload structure: [[[source_id]]] (triple-nested)
     const response = await this.rpc('tGMBJ', [[[sourceId]]], `/notebook/${notebookId}`);
@@ -315,6 +542,12 @@ const NotebookLMAPI = {
   // Delete multiple sources from notebook (batch operation)
   // API supports max ~20 sources per request, so we chunk into batches
   async deleteSources(notebookId, sourceIds) {
+    // Validate notebook ID
+    ResponseValidator.validateNotebookId(notebookId);
+
+    // Validate all source IDs
+    sourceIds.forEach(id => ResponseValidator.validateNotebookId(id));
+
     if (sourceIds.length === 0) {
       return { success: true, deletedCount: 0 };
     }
@@ -499,7 +732,8 @@ async function listAccounts() {
     // Return both formats for compatibility
     return { accounts, list: accounts };
   } catch (error) {
-    return { error: error.message, accounts: [], list: [] };
+    ErrorHandler.logError('listAccounts', error);
+    return { error: ErrorHandler.getUserFriendlyMessage(error), accounts: [], list: [] };
   }
 }
 
@@ -509,7 +743,8 @@ async function listNotebooks() {
     const notebooks = await NotebookLMAPI.listNotebooks();
     return { notebooks };
   } catch (error) {
-    return { error: error.message, notebooks: [] };
+    ErrorHandler.logError('listNotebooks', error);
+    return { error: ErrorHandler.getUserFriendlyMessage(error), notebooks: [] };
   }
 }
 
@@ -519,7 +754,8 @@ async function listNotebooksLegacy() {
     const notebooks = await NotebookLMAPI.listNotebooks();
     return { list: notebooks };
   } catch (error) {
-    return { err: error.message, list: [] };
+    ErrorHandler.logError('listNotebooksLegacy', error);
+    return { err: ErrorHandler.getUserFriendlyMessage(error), list: [] };
   }
 }
 
@@ -529,7 +765,8 @@ async function createNotebook(title, emoji = '📔') {
     const notebook = await NotebookLMAPI.createNotebook(title, emoji);
     return { notebook };
   } catch (error) {
-    return { error: error.message };
+    ErrorHandler.logError('createNotebook', error);
+    return { error: ErrorHandler.getUserFriendlyMessage(error) };
   }
 }
 
@@ -539,7 +776,8 @@ async function addSource(notebookId, url) {
     await NotebookLMAPI.addSource(notebookId, url);
     return { success: true };
   } catch (error) {
-    return { error: error.message };
+    ErrorHandler.logError('addSource', error);
+    return { error: ErrorHandler.getUserFriendlyMessage(error) };
   }
 }
 
@@ -556,7 +794,8 @@ async function addSources(notebookId, urls) {
       notebookUrl: NotebookLMAPI.getNotebookUrl(notebookId, currentAuthuser)
     };
   } catch (error) {
-    return { error: error.message };
+    ErrorHandler.logError('addSources', error);
+    return { error: ErrorHandler.getUserFriendlyMessage(error) };
   }
 }
 
@@ -566,7 +805,8 @@ async function addTextSource(notebookId, text, title) {
     await NotebookLMAPI.addTextSource(notebookId, text, title);
     return { success: true };
   } catch (error) {
-    return { error: error.message };
+    ErrorHandler.logError('addTextSource', error);
+    return { error: ErrorHandler.getUserFriendlyMessage(error) };
   }
 }
 
@@ -576,7 +816,8 @@ async function getNotebook(notebookId) {
     const notebook = await NotebookLMAPI.getNotebook(notebookId);
     return { notebook };
   } catch (error) {
-    return { error: error.message };
+    ErrorHandler.logError('getNotebook', error);
+    return { error: ErrorHandler.getUserFriendlyMessage(error) };
   }
 }
 
@@ -586,7 +827,8 @@ async function getSources(notebookId) {
     const notebook = await NotebookLMAPI.getNotebook(notebookId);
     return { sources: notebook.sources || [] };
   } catch (error) {
-    return { error: error.message, sources: [] };
+    ErrorHandler.logError('getSources', error);
+    return { error: ErrorHandler.getUserFriendlyMessage(error), sources: [] };
   }
 }
 
@@ -596,7 +838,8 @@ async function deleteSource(notebookId, sourceId) {
     await NotebookLMAPI.deleteSource(notebookId, sourceId);
     return { success: true };
   } catch (error) {
-    return { error: error.message };
+    ErrorHandler.logError('deleteSource', error);
+    return { error: ErrorHandler.getUserFriendlyMessage(error) };
   }
 }
 
@@ -610,7 +853,8 @@ async function deleteSources(notebookId, sourceIds) {
       failCount: 0
     };
   } catch (error) {
-    return { error: error.message };
+    ErrorHandler.logError('deleteSources', error);
+    return { error: ErrorHandler.getUserFriendlyMessage(error) };
   }
 }
 
@@ -745,8 +989,7 @@ async function doParseComments(notebookId, videoId, tabId) {
 
   try {
     // Phase 1: Fetch metadata from DOM (no API key needed)
-    // Pass videoId as fallback in case DOM extraction fails
-    const metadata = await YouTubeCommentsAPI.getVideoMetadataFromDOM(tabId, videoId);
+    const metadata = await YouTubeCommentsAPI.getVideoMetadataFromDOM(tabId);
     parseState.progress.total = metadata.commentCount;
 
     if (cancelToken.cancelled) return;

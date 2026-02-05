@@ -27,6 +27,73 @@ let notebooks = [];
 let youtubePageType = null; // 'video', 'playlist', 'channel', or null
 let youtubeVideoUrls = []; // For playlists/channels
 
+// Error handling constants
+const ERROR_MESSAGES = {
+  NETWORK_ERROR: {
+    en: 'Network error. Please check your internet connection.',
+    ru: 'Ошибка сети. Проверьте подключение к интернету.',
+    uk: 'Помилка мережі. Перевірте підключення до Інтернету.'
+  },
+  AUTH_ERROR: {
+    en: 'Please login to NotebookLM first.',
+    ru: 'Пожалуйста, войдите в NotebookLM.',
+    uk: 'Спочатку увійдіть до NotebookLM.'
+  },
+  NO_VIDEOS: {
+    en: 'No videos found. Try scrolling down to load more videos, then try again.',
+    ru: 'Видео не найдено. Прокрутите страницу вниз для загрузки видео и попробуйте снова.',
+    uk: 'Відео не знайдено. Прокрутіть сторінку вниз для завантаження відео та спробуйте знову.'
+  },
+  TIMEOUT: {
+    en: 'Request timeout. Please try again.',
+    ru: 'Превышено время ожидания. Попробуйте снова.',
+    uk: 'Перевищено час очікування. Спробуйте ще раз.'
+  },
+  GENERIC: {
+    en: 'An unexpected error occurred. Please try again.',
+    ru: 'Произошла неожиданная ошибка. Попробуйте снова.',
+    uk: 'Сталася неочікувана помилка. Спробуйте ще раз.'
+  }
+};
+
+// Get localized error message
+function getLocalizedError(errorKey, fallbackMessage) {
+  const lang = document.documentElement.lang || 'en';
+
+  if (ERROR_MESSAGES[errorKey]) {
+    if (lang.startsWith('uk')) {
+      return ERROR_MESSAGES[errorKey].uk;
+    } else if (lang.startsWith('ru')) {
+      return ERROR_MESSAGES[errorKey].ru;
+    } else {
+      return ERROR_MESSAGES[errorKey].en;
+    }
+  }
+
+  return fallbackMessage;
+}
+
+// Parse error from response
+function parseError(error) {
+  const errorMessage = error.message || error.toString();
+
+  if (errorMessage.includes('Network') || errorMessage.includes('Failed to fetch')) {
+    return getLocalizedError('NETWORK_ERROR', errorMessage);
+  }
+
+  if (errorMessage.includes('Not authorized') || errorMessage.includes('login')) {
+    return getLocalizedError('AUTH_ERROR', errorMessage);
+  }
+
+  if (errorMessage.includes('timeout') || errorMessage.includes('AbortError')) {
+    return getLocalizedError('TIMEOUT', errorMessage);
+  }
+
+  // Return original message if no match
+  return errorMessage || getLocalizedError('GENERIC', 'Unknown error');
+}
+
+
 async function init() {
   // Initialize localization first
   if (window.I18n) {
@@ -186,7 +253,9 @@ async function loadAccounts() {
 }
 
 // Load notebooks list
-async function loadNotebooks() {
+async function loadNotebooks(retryCount = 0) {
+  const MAX_RETRIES = 2;
+
   try {
     const loadingText = t('popup_loadingNotebooks', 'Loading notebooks...');
     showStatus('loading', loadingText);
@@ -194,7 +263,19 @@ async function loadNotebooks() {
     const response = await sendMessage({ cmd: 'list-notebooks' });
 
     if (response.error) {
-      showStatus('error', response.error);
+      // Parse and show user-friendly error
+      const friendlyError = parseError({ message: response.error });
+      showStatus('error', friendlyError);
+
+      // Suggest retry for network errors
+      if (friendlyError.includes('Network') && retryCount < MAX_RETRIES) {
+        setTimeout(() => {
+          console.log(`Retrying loadNotebooks (attempt ${retryCount + 1})`);
+          loadNotebooks(retryCount + 1);
+        }, 2000);
+        return;
+      }
+
       const loginText = t('popup_loginRequired', 'Login to NotebookLM first');
       notebookSelect.textContent = '';
       const loginOption = document.createElement('option');
@@ -242,9 +323,14 @@ async function loadNotebooks() {
     }
   } catch (error) {
     console.error('Error loading notebooks:', error);
-    const errorText = t('popup_error', 'Failed to load notebooks');
-    showStatus('error', errorText);
+    const friendlyError = parseError(error);
+    showStatus('error', friendlyError);
     addBtn.disabled = true;
+
+    // Show more context for debugging
+    if (error.stack) {
+      console.error('Stack trace:', error.stack);
+    }
   }
 }
 
@@ -319,8 +405,14 @@ async function handleAddToNotebook() {
       }
     }
   } catch (error) {
-    const errorText = t('popup_error', 'Failed to add to notebook');
-    showStatus('error', errorText);
+    console.error('handleAddToNotebook error:', error);
+    const friendlyError = parseError(error);
+    showStatus('error', friendlyError);
+
+    // Show more context for debugging
+    if (error.stack) {
+      console.error('Stack trace:', error.stack);
+    }
   } finally {
     addBtn.disabled = false;
   }
@@ -341,6 +433,13 @@ async function getYouTubeVideoUrls() {
     return results[0]?.result || [];
   } catch (error) {
     console.error('Error getting video URLs:', error);
+
+    // Show user-friendly error if it's an access error
+    if (error.message && error.message.includes('Cannot access')) {
+      const errorMsg = t('popup_error', 'Cannot access YouTube page. Please refresh the page and try again.');
+      showStatus('error', errorMsg);
+    }
+
     return [];
   }
 }
@@ -490,7 +589,16 @@ async function handleCreateNotebook() {
     });
 
     if (createResponse.error) {
-      showStatus('error', createResponse.error);
+      const friendlyError = parseError({ message: createResponse.error });
+      showStatus('error', friendlyError);
+      console.error('Create notebook error:', createResponse.error);
+      return;
+    }
+
+    // Validate notebook response
+    if (!createResponse.notebook || !createResponse.notebook.id) {
+      showStatus('error', 'Invalid response from server. Please try again.');
+      console.error('Invalid create response:', createResponse);
       return;
     }
 
@@ -519,8 +627,9 @@ async function handleCreateNotebook() {
     notebookSelect.value = notebook.id;
 
   } catch (error) {
-    const errorText = t('popup_error', 'Failed to create notebook');
-    showStatus('error', errorText);
+    console.error('handleCreateNotebook error:', error);
+    const friendlyError = parseError(error);
+    showStatus('error', friendlyError);
   } finally {
     modalCreate.disabled = false;
     const createAndAddText = t('popup_createAndAdd', 'Create & Add');

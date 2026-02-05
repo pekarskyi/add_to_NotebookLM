@@ -1,0 +1,358 @@
+{
+    "extName": {
+        "message": "Додати до NotebookLM",
+        "description": "Назва розширення"
+    },
+    "extDescription": {
+        "message": "Імпортуйте YouTube відео та веб-сторінки до NotebookLM одним кліком. Масовий імпорт, підтримка плейлистів та багато іншого.",
+        "description": "Опис розширення"
+    },
+    "popup_currentPage": {
+        "message": "Поточна сторінка:",
+        "description": "Мітка поточної сторінки"
+    },
+    "popup_selectNotebook": {
+        "message": "Додати до нотатника:",
+        "description": "Мітка вибору нотатника"
+    },
+    "popup_addToNotebook": {
+        "message": "Додати до нотатника",
+        "description": "Текст кнопки додавання"
+    },
+    "popup_addVideo": {
+        "message": "Додати відео до нотатника",
+        "description": "Текст кнопки додавання відео"
+    },
+    "popup_addPlaylist": {
+        "message": "Додати плейлист до нотатника",
+        "description": "Текст кнопки додавання плейлиста"
+    },
+    "popup_addAllPlaylist": {
+        "message": "Додати всі відео з плейлиста",
+        "description": "Текст кнопки додавання всіх відео з плейлиста"
+    },
+    "popup_addChannelVideos": {
+        "message": "Додати відео каналу до нотатника",
+        "description": "Текст кнопки додавання відео каналу"
+    },
+    "popup_createNotebook": {
+        "message": "Створити новий нотатник",
+        "description": "Кнопка створення нотатника"
+    },
+    "popup_bulkImport": {
+        "message": "Масовий імпорт",
+        "description": "Кнопка масового імпорту"
+    },
+    "popup_fromTabs": {
+        "message": "З вкладок",
+        "description": "Кнопка імпорту з вкладок"
+    },
+    "popup_loading": {
+        "message": "Завантаження...",
+        "description": "Стан завантаження"
+    },
+    "popup_loadingNotebooks": {
+        "message": "Завантаження нотатників...",
+        "description": "Завантаження нотатників"
+    },
+    "popup_success": {
+        "message": "Успішно додано!",
+        "description": "Повідомлення про успіх"
+    },
+    "popup_error": {
+        "message": "Не вдалося додати. Спробуйте ще раз.",
+        "description": "Повідомлення про помилку"
+    },
+    "popup_loginRequired": {
+        "message": "Спочатку увійдіть до NotebookLM",
+        "description": "Повідомлення про необхідність входу"
+    },
+    "popup_noNotebooks": {
+        "message": "Нотатники не знайдено",
+        "description": "Повідомлення про відсутність нотатників"
+    },
+    "popup_tools": {
+        "message": "Інструменти:",
+        "description": "Мітка секції інструментів"
+    },
+    "popup_openNotebook": {
+        "message": "Відкрити нотатник",
+        "description": "Кнопка відкриття нотатника"
+    },
+    "popup_cancel": {
+        "message": "Скасувати",
+        "description": "Кнопка скасування"
+    },
+    "popup_createAndAdd": {
+        "message": "Створити і додати",
+        "description": "Кнопка створення та додавання"
+    },
+    "popup_notebookName": {
+        "message": "Назва нотатника",
+        "description": "Заповнювач назви нотатника"
+    },
+    "popup_extractingVideos": {
+        "message": "Витягування відео з",
+        "description": "Повідомлення про витягування відео"
+    },
+    "popup_addingVideos": {
+        "message": "Додавання відео до нотатника...",
+        "description": "Повідомлення про додавання відео"
+    },
+    "popup_noVideosFound": {
+        "message": "Відео не знайдено. Спробуйте прокрутити вниз для завантаження більше відео, потім спробуйте знову.",
+        "description": "Повідомлення про відсутність відео"
+    },
+    "popup_videosAdded": {
+        "message": "відео додано!",
+        "description": "Повідомлення про додані відео"
+    },
+    "popup_addedTo": {
+        "message": "Додано до",
+        "description": "Префікс 'додано до'"
+    },
+    "popup_playlist": {
+        "message": "Плейлист",
+        "description": "Мітка плейлиста"
+    },
+    "popup_videoFromPlaylist": {
+        "message": "Відео з плейлиста",
+        "description": "Мітка відео з плейлиста"
+    },
+    "popup_clickToAddAll": {
+        "message": "Натисніть, щоб додати всі відео",
+        "description": "Підказка для додавання всіх"
+    },
+    "popup_channel": {
+        "message": "Канал",
+        "description": "Мітка каналу"
+    },
+    "bulk_title": {
+        "message": "Масовий імпорт",
+        "description": "Заголовок сторінки масового імпорту"
+    },
+    "bulk_description": {
+        "message": "Імпортуйте кілька посилань до NotebookLM одразу",
+        "description": "Опис масового імпорту"
+    },
+    "bulk_linksTab": {
+        "message": "Посилання",
+        "description": "Вкладка посилань"
+    },
+    "bulk_tabsTab": {
+        "message": "Вкладки браузера",
+        "description": "Вкладка вкладок браузера"
+    },
+    "bulk_settingsTab": {
+        "message": "Налаштування",
+        "description": "Вкладка налаштувань"
+    },
+    "bulk_selectNotebook": {
+        "message": "Виберіть нотатник",
+        "description": "Заголовок вибору нотатника"
+    },
+    "bulk_pasteLinks": {
+        "message": "Вставте посилання",
+        "description": "Заголовок секції вставки посилань"
+    },
+    "bulk_enterUrls": {
+        "message": "Введіть URL (по одному на рядок):",
+        "description": "Мітка введення URL"
+    },
+    "bulk_importLinks": {
+        "message": "Імпортувати посилання",
+        "description": "Кнопка імпорту посилань"
+    },
+    "bulk_selectTabs": {
+        "message": "Виберіть вкладки браузера",
+        "description": "Заголовок секції вибору вкладок"
+    },
+    "bulk_selectAll": {
+        "message": "Вибрати все",
+        "description": "Прапорець вибору всіх"
+    },
+    "bulk_importTabs": {
+        "message": "Імпортувати вибрані вкладки",
+        "description": "Кнопка імпорту вкладок"
+    },
+    "bulk_openNotebook": {
+        "message": "Відкрити нотатник",
+        "description": "Посилання відкриття нотатника"
+    },
+    "bulk_createNewNotebook": {
+        "message": "Створити новий нотатник",
+        "description": "Кнопка створення нового нотатника"
+    },
+    "bulk_loadingTabs": {
+        "message": "Завантаження вкладок...",
+        "description": "Повідомлення про завантаження вкладок"
+    },
+    "bulk_noTabs": {
+        "message": "Вкладки не знайдено",
+        "description": "Повідомлення про відсутність вкладок"
+    },
+    "bulk_failedToLoad": {
+        "message": "Не вдалося завантажити вкладки",
+        "description": "Повідомлення про помилку завантаження вкладок"
+    },
+    "settings_title": {
+        "message": "Налаштування",
+        "description": "Заголовок налаштувань"
+    },
+    "settings_language": {
+        "message": "Мова:",
+        "description": "Мітка налаштування мови"
+    },
+    "settings_languageHint": {
+        "message": "Виберіть мову інтерфейсу",
+        "description": "Підказка налаштування мови"
+    },
+    "settings_account": {
+        "message": "Обліковий запис Google:",
+        "description": "Мітка налаштування облікового запису"
+    },
+    "settings_accountHint": {
+        "message": "Виберіть обліковий запис Google для NotebookLM",
+        "description": "Підказка налаштування облікового запису"
+    },
+    "settings_autoOpen": {
+        "message": "Автоматично відкривати нотатник після додавання джерел",
+        "description": "Налаштування автовідкриття"
+    },
+    "settings_youtube": {
+        "message": "Налаштування YouTube",
+        "description": "Заголовок налаштувань YouTube"
+    },
+    "settings_youtubeHint": {
+        "message": "Для плейлистів і каналів YouTube використовуйте кнопки, які з'являються безпосередньо на сторінках YouTube. Розширення автоматично витягне URL відео за допомогою API InnerTube YouTube.",
+        "description": "Підказка налаштувань YouTube"
+    },
+    "settings_about": {
+        "message": "Про розширення",
+        "description": "Заголовок секції 'Про'"
+    },
+    "settings_aboutText": {
+        "message": "Розширення Chrome для імпорту YouTube відео, плейлистів, каналів, веб-сторінок та коментарів до Google NotebookLM. Підтримує масовий імпорт та кілька облікових записів Google.",
+        "description": "Текст 'Про розширення'"
+    },
+    "settings_openNotebookLM": {
+        "message": "Відкрити NotebookLM",
+        "description": "Кнопка відкриття NotebookLM"
+    },
+    "settings_accountChanged": {
+        "message": "Обліковий запис змінено. Нотатники перезавантажено.",
+        "description": "Повідомлення про зміну облікового запису"
+    },
+    "settings_darkMode": {
+        "message": "Темна тема",
+        "description": "Мітка перемикача темної теми"
+    },
+    "settings_darkModeHint": {
+        "message": "Перемикання між світлою та темною темою",
+        "description": "Підказка перемикача темної теми"
+    },
+    "common_sources": {
+        "message": "джерел",
+        "description": "Мітка джерел"
+    },
+    "common_links": {
+        "message": "посилань",
+        "description": "Множина посилань"
+    },
+    "common_tabs": {
+        "message": "вкладок",
+        "description": "Множина вкладок"
+    },
+    "settings_enableBulkDelete": {
+        "message": "Увімкнути кнопку масового видалення в NotebookLM",
+        "description": "Мітка налаштування масового видалення"
+    },
+    "settings_bulkDeleteHint": {
+        "message": "Показує кнопку видалення при виборі кількох джерел у NotebookLM",
+        "description": "Підказка налаштування масового видалення"
+    },
+    "comments_parseComments": {
+        "message": "Парсити коментарі",
+        "description": "Кнопка парсингу коментарів"
+    },
+    "comments_loadingComments": {
+        "message": "Завантаження коментарів...",
+        "description": "Прогрес завантаження коментарів"
+    },
+    "comments_loadingReplies": {
+        "message": "Завантаження відповідей...",
+        "description": "Прогрес завантаження відповідей"
+    },
+    "comments_commentsLoaded": {
+        "message": "коментарів",
+        "description": "Мітка коментарів на етапі завантаження відповідей"
+    },
+    "comments_formatting": {
+        "message": "Форматування...",
+        "description": "Прогрес форматування коментарів"
+    },
+    "comments_sending": {
+        "message": "Надсилання до NotebookLM...",
+        "description": "Надсилання коментарів до NotebookLM"
+    },
+    "comments_commentsDisabled": {
+        "message": "Коментарі вимкнено для цього відео",
+        "description": "Помилка відключених коментарів"
+    },
+    "comments_modeLabel": {
+        "message": "Режим парсингу коментарів:",
+        "description": "Мітка режиму коментарів"
+    },
+    "comments_modeTop": {
+        "message": "Топ коментарів (~1000 найпопулярніших)",
+        "description": "Опція режиму топ коментарів"
+    },
+    "comments_modeNewest": {
+        "message": "Всі (спочатку нові)",
+        "description": "Опція режиму найновіших коментарів"
+    },
+    "comments_limitLabel": {
+        "message": "Ліміт коментарів:",
+        "description": "Мітка ліміту коментарів"
+    },
+    "comments_limitUnlimited": {
+        "message": "Необмежено ⚠️",
+        "description": "Опція необмежено"
+    },
+    "comments_includeReplies": {
+        "message": "Завантажувати відповіді",
+        "description": "Прапорець включення відповідей"
+    },
+    "comments_includeRepliesHint": {
+        "message": "Завантажувати гілки відповідей для кожного коментаря",
+        "description": "Підказка включення відповідей"
+    },
+    "comments_cancelParsing": {
+        "message": "Скасувати",
+        "description": "Кнопка скасування парсингу"
+    },
+    "comments_cancelled": {
+        "message": "Парсинг скасовано",
+        "description": "Повідомлення про скасування парсингу"
+    },
+    "comments_networkError": {
+        "message": "Помилка мережі. Перевірте підключення.",
+        "description": "Повідомлення про помилку мережі"
+    },
+    "comments_videoNotFound": {
+        "message": "Відео не знайдено",
+        "description": "Помилка відсутності відео"
+    },
+    "comments_notYoutubePage": {
+        "message": "Не вдалося визначити ID відео на цій сторінці",
+        "description": "Не сторінка відео YouTube"
+    },
+    "comments_commentsParsed": {
+        "message": "коментарів додано до",
+        "description": "Коментарі спарсено та додано до нотатника"
+    },
+    "comments_invalidRequest": {
+        "message": "Недійсний запит",
+        "description": "Помилка недійсного запиту"
+    }
+}
